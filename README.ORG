@@ -1,0 +1,68 @@
+#+Title: Full Scale Sector Copy (FSSC) 1.5.0
+#+Author: Carsten Strotmann
+#+Date: <2023-05-20 Sat>
+
+FSSC is a new copy program for Atari 8bit computers. It was specially
+developed to copy floppy disks or hard disks with any number of
+sectors (up to 65535 sectors). Thereby source and destination must be
+either classic ATARI floppy disk drives (single or medium density) or
+double- or quad-density drives according to the PERCOM standard. The
+program reads the PERCOM table from the drives and copies the data
+using this PERCOM data. Drives with double- or quad-density which do
+not support the PERCOM standard will probably not work with this
+program.
+
+Source and target drive must support the same sector size, but may
+have a different number of sectors. So it is possible to transfer a
+single-density floppy disk (720 sectors) to a medium-density floppy
+disk with 1040 sectors (or copy a medium-density floppy disk that is
+not completely full to a single-density floppy disk).
+
+The program tries to load and install a SIO highspeed routine from the
+drives (according to the Speedy standard). If this is successful then
+the respective drive is addressed with High-Speed, otherwise it will
+be used only with normal SIO speed.
+
+FSSC does not format the target disk, the target must always be
+formatted.
+
+FSSC can be started from a DOS or from a boot loader program (Pico-DOS
+etc).
+
+* Operation
+
+Source and destination disks are selected using the keys 1-9 (source) and
+Shift-1-9 (destination). The tool will try to read the floppy status
+and PERCOM data of the drives.
+
+Start the copy process with key "C" (Copy) or START.
+
+After a successful (or failed) copy operation, the menu can be
+displayed again by pressing the "M" key.
+
+The "S" key shows details of the configuration of the source drive, the
+F" key shows the details of the destination drive.
+
+The key "D" lists the table of contents for DOS 2.5 compatible
+disks.
+
+The key "Q" exits the program, if it was started from a DOS
+it will return to the DOS prompt or menu.
+
+* Feedback
+
+FSSC is open source software (GPL2 license), the program and the
+source code can be found on Github at
+https://github.com/cstrotm/atari8bit-fssc. Alternatively the current
+version of FSSC can be found on the ABBUC FujiNet server at
+fujinet://fujinet.abbuc.de/members/cas/diskutils/fssc.atr
+
+Error messages and functional requests can be submitted on Github
+(please create a ticket under "Issue").
+
+FSSC is a fork of the ATR-Copy-Center (ACC; an archiving program for the
+SIO2USB) and was programmed in SPL-6502-Atari (.
+
+Thanks to Thomas Grasel (for functions in the ACC), Ron Kneusel for
+SPL-6502-Apple, Markus 'RIK' Römer for HATZ 2023 and Matthias "Hias"
+Reichl for AtariSIO).
