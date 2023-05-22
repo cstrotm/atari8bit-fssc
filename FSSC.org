@@ -1,0 +1,72 @@
+#+Title: Full Scale Sector Copy (FSSC) 1.5.0
+#+Author: Carsten Strotmann
+#+Date: <2023-05-20 Sat>
+
+FSSC ist ein neues Kopierprogramm für Atari 8bit Rechner. Es wurde
+speziell entwickelt, um Disketten oder Festplatten mit beliebiger
+Anzahl von Sektoren zu kopieren (bis zu 65535 Sektoren). Dabei müssen
+Quelle und Ziel entweder klassische ATARI Diskettenstationen (Single
+oder Medium Density) oder Double- oder Quad-Density Laufwerke nach dem
+PERCOM Standard sein. Das Programm liest die PERCOM Tabelle aus den
+Laufwerken und kopiert die Daten anhand der PERCOM-Daten. Laufwerke
+mit Double- oder Quad-Density welche nicht nach dem PERCOM-Standard
+arbeiten werden mit diesem Programm wahrscheinlich nicht
+funktionieren.
+
+Quell- und Ziel-Laufwerk müssen die gleiche Sektorengrösse
+unterstützen, dürfen aber eine unterschiedliche Anzahl von Sektoren
+besitzen. Somit ist es möglich eine Single-Density Diskette (720
+Sektoren) auf eine Medium-Density Diskette mit 1040 Sektoren zu
+kopieren (oder eine nicht ganz gefüllte Medium-Density-Diskette auf
+eine Single-Density Diskette).
+
+Das Programm versucht aus den Laufwerken eine Highspeed-Routine zu
+laden und zu installieren (nach dem Speedy-Standard). Ist dies
+Erfolgreich so wird das jeweilige Laufwerk mit High-Speed
+angesprochen, ansonsten nur mit normaler SIO-Geschwindigkeit.
+
+FSSC formaiert die Zieldiskette nicht, das Ziel muss immer schon
+formatiert sein.
+
+FSSC kann aus einem DOS oder von einem Boot-Loader-Programm (Pico-DOS
+etc) gestartet werden.
+
+* Bedienung
+
+Quell- und Ziel-Laufwerke werden mittels der Tasten 1-9 (Quelle) und
+Shift-1-9 (Ziel) ausgewählt. Dabei wird versucht mittels Floppy-Status
+und PERCOM-Abfrage die Parameter der Laufwerke zu lesen.
+
+Mit der Taste "C" (Copy) oder START wird der Kopiervorgang gestartet.
+
+Nach einem erfolgreichen (oder fehlgechlagenen) Kopiervorgang kann das
+Menü mittels Taste "M" wieder angezeigt werden.
+
+Die Taste "S" zeigt Details zur Konfiguration des Quell-Laufwerks, die
+Taste "F" die Details des Ziel-Laufwerks an.
+
+Die Taste "D" listet das Inhaltsverzeichnis bei DOS 2.5 kopatiblen
+DOS-Systemen auf.
+
+Die Taste "Q" verlässt das Programm, wurde es von einem DOS gestartet
+wird dieses wieder aktiv.
+
+* Rückmeldungen
+
+FSSC ist Open-Source Software (GPL2 Lizenz), das Programm und der
+Quellcode sind auf Github unter
+https://github.com/cstrotm/atari8bit-fssc zu finden. Alternativ
+befindet sich die aktuelle Version vom FSSC auf dem ABBUC FujiNet
+Server unter fujinet.abbuc.de/members/cas/diskutils/fssc.atr
+
+Fehlermeldungen und auch Funktions-Wünsche können dort übermittelt
+werden (bitte ein Ticket unter "Issue" erstellen). Alternativ können
+Rückmeldungen per E-Mail an den Autor unter cas@abbuc.de gesendet
+werden.
+
+FSSC ist das dem ATR-Copy-Center (ACC; ein Archivier-Programm für das
+SIO2USB) entstanden und wurde in SPL-6502-Atari Programmiert.
+
+Dank an Thomas Grasel (für Funktionen im ACC), Oneel Kruns für
+SPL-6502-Apple, Markus 'RIK' Römer für die HATZ 2023 und Matthias
+"Hias" Reichl für AtariSIO).

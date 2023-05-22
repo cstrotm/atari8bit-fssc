@@ -1,0 +1,642 @@
+# Full Scale Sector Copy
+# 2008-2023 Carsten Strotmann
+# 2023/05/18
+
+const bl $20 ( blank )
+
+const rd $40
+const wr $80
+
+const ddevic $0300
+const dunit  $0301
+const dcmnd  $0302
+const dstats $0303
+const dbuf   $0304
+const dtimlo $0306
+const dbyt   $0308
+const daux   $030A
+
+const memtop $02E5 ( last free memory location )
+const memlo  $02E7 ( first free memory location )
+const appmhi $0E
+const chkey  $02FC
+const consol $D01F
+
+var percom 12
+var drvstat 17
+var buf   $100
+var secbuf    2
+var bufbase   2
+var bufsize   2
+var bufend    2
+var secbuforg 2
+var hsbase    2
+var hsdest    2
+var hssrc     2
+var siov      2
+var siolen    2
+var tracks    2
+var secpertrack 2
+var errorcode 1
+var adrstr1   2
+var adrstr2   2
+var lenstr1   1
+var lenstr2   1
+
+var devid  1
+var srcnm  1
+var destnm 1
+var bytsec 2
+var sectors 2
+var sector  2
+var side   1
+var i      2
+var cnt    2
+var debugflg 1
+
+str sterror " Error"
+str stwhile "while"
+str streading "reading"
+str stwriting "writing"
+str stsector "Sector"
+str stsize "size"
+str stillegal "illegal"
+str stmissing "missing"
+str stsingle "single"
+str stmedium "medium"
+str stdouble "double"
+str stdrive "Drive"
+str ststatus "status"
+str sttimeout "Timeout"
+str stwd2793 "WD2793"
+str stsrc "Src"
+str stdest "Dst"
+str stdensity "Dens."
+str stdigit "Digit"
+str ston "On "
+str stoff "Off"
+str stmake "make"
+str stmount "mount"
+str stcopy "Copy"
+str stread "Read "
+str stwrite "Write"
+str stzeros0 "00000"
+str stzeros1 "00000"
+str stzeros2 "00000"
+str stcompleted "completed"
+str stsuccessfully "successfully"
+str stunsuccessfully "unsuccessfully"
+str stdots "..."
+str sttracks "Tracks"
+str ststep "Step"
+str stdir "Directory"
+str strate "Rate"
+str stsectrack "Sec/Track"
+str stsides "Sides"
+str stbytessec "Bytes/Sec"
+str stencoding "Encoding"
+str stside "Side"
+str stmenumsg "[M] for menu"
+str stnextcpy "C or [START] to start next copy"
+str sthighspeed "high speed"
+str stnormalspeed "normal speed"
+
+: debug
+  dup 20 20 at "debug:" disp dup .$ "  "  disp "  " disp .
+;
+
+: debugk
+  dup 20 20 at "debug:" disp dup .$ "  "  disp "  " disp . key drop
+;
+
+: dispspace
+  disp space
+;
+
+: init ( -- )
+  0 debugflg c!
+  $44 devid c!
+  1 srcnm  c!
+  2 destnm c!
+  $80 bytsec !
+  18 secpertrack !
+  720 sectors !
+  end@ secbuf !
+  $E459 hsdest !
+  $E459 hssrc !
+  $E459 siov !
+  end@ appmhi !
+;
+
+: lcls ( y -- )
+  crsoff 0 at 156 emit ;
+
+: insline ( y -- )
+  0 at 157 emit ;
+
+: clearline ( y -- )
+  39 i ! {
+     dup i at 31 emit
+     i --
+     i @ 0 = if break then
+  }
+  drop
+;
+
+: rcls ( pos lines -- )
+  i ! {
+    dup lcls
+    i --
+    i @ 0 = if break then
+  }
+  drop
+;
+
+: line ( y -- )
+  40 * $58 @ + 40 $52 fill ;
+
+: colon ( -- )
+  $3A emit ;
+
+data bittable
+     $01 $02 $04 $08
+     $10 $20 $40 $80
+end
+
+: bits ( n -- bm )
+  bittable + c@ ;
+
+code scopy
+[    ldy #5 ]
+[    jmp sc1 ]
+end
+code sc1
+[    lda stzeros1,y  ]
+[    clc    ]
+[    adc #1 ]
+[    sta stzeros1,y ]
+[    cmp #$3A ]
+[    bne sc2  ]
+[    lda #$30 ]
+[    sta stzeros1,y ]
+[    dey ]
+[    bne sc1 ]
+[    jmp sc2 ]
+end
+code sc2
+[    rts     ]
+end
+
+: sio ( -- rc )
+  siov @ call
+  dstats c@
+;
+
+: secbuffetch ( -- )
+  secbuf @ ;
+
+: clearbuf
+  buf $FF $FF fill
+  0 buf c!
+  0 buf $7F + c!
+;
+
+: buf1 ( -- addr )
+  buf 1+ ;
+
+: preparesio ( -- )
+  $31 ddevic c!
+  $07 dtimlo c!
+  0 daux !
+;
+
+: writecmd ( -- rc )
+  wr dstats c!
+  sio
+;
+
+: readcmd  ( -- rc )
+  rd dstats c!
+  sio
+;
+
+: getstatus ( drv -- rc )
+  dunit c!
+  preparesio
+  $53 dcmnd c!
+  drvstat dbuf !
+  4 dbyt !
+  readcmd
+;
+
+: getsiolen ( n -- l )
+  dunit c!
+  preparesio
+  $68 dcmnd c!
+  secbuf @ dbuf !
+  2 dbyt !
+  readcmd drop
+  secbuf @ @
+  dup siolen !
+;
+
+: gethssio ( addr drv# -- )
+  getsiolen dbyt !
+  preparesio
+  $69 dcmnd c!
+  dup dbuf ! daux !
+  readcmd drop
+;
+
+: getsdrvsio ( -- )
+  hsbase @ appmhi !
+  appmhi @ srcnm @ gethssio
+  1 = if
+     appmhi @ hssrc !
+     siolen @ appmhi +!
+  then
+;
+
+: getddrvsio ( -- )
+  appmhi @ srcnm @ gethssio
+  1 = if
+     appmhi @ hsdest !
+     siolen @ appmhi +!
+  then
+;
+
+: cprint ( addr -- )
+  c@ u. ;
+
+: cprintplus ( addr n -- )
+  + cprint ;
+
+: printstatus
+  stdrive disp
+  ststatus disp colon drvstat cprint
+  "    " disp stwd2793 disp colon drvstat 3 cprintplus cr
+  sttimeout disp colon drvstat 2 cprintplus
+;
+
+: mdquery ( drv -- :: tests for medium density )
+  getstatus drop drvstat c@ $80 and
+  dup 0 > if
+    1040 sectors !
+    $80 bytsec !
+    26 secpertrack !
+  then ;
+
+: clearpercom
+  percom 12 0 fill ;
+
+: getsectors ( -- sec )
+  percom c@ percom 2 + @ >< *
+;
+
+: getpercom (drv  -- rc )
+  clearpercom dunit c! preparesio
+  $4E dcmnd c!
+  percom dbuf !
+  12 dbyt !
+  readcmd drop getsectors sectors !
+;
+
+: printpercom ( -- )
+     sttracks disp colon                percom cprint
+  cr ststep disp strate disp colon      percom 1 cprintplus
+  cr stsectrack disp colon              percom 2+ @ >< u.
+  cr stsides disp colon                 percom 4 cprintplus
+  cr stencoding disp colon              percom 5 cprintplus
+  cr stbytessec disp colon              percom 6 + @ >< u.
+  cr stdrive disp ston disp colon       percom 8 cprintplus
+  cr stsector disp colon                getsectors u.
+;
+
+
+: seccmd ( secnum cmd -- )
+  preparesio
+  dcmnd c!      ( store command )
+  dup daux !    ( store sector number )
+  4 < if $80 else bytsec @ then dbyt ! ( check for 1st 4 sec = SD )
+  secbuf @ dbuf !
+;
+
+: readsec ( i -- )
+  srcnm c@  dunit c! $52 seccmd  readcmd
+;
+
+: writesec ( i -- )
+  destnm c@ dunit c! $50 seccmd writecmd
+;
+
+code fullquery ( checks if sector buffer is empty )
+[    lda secbuf  ]
+[    sta ta      ]
+[    lda secbuf+1 ]
+[    sta ta+1    ]
+[    ldy #0      ]
+[    tya         ]
+end
+code fq1
+[    ora (ta),y	 ]
+[    iny         ]
+[    cpy bytsec  ]
+[    bne fq1	 ]
+[    jmp push0a  ]
+end
+
+# user interface code
+
+: printinfo ( drv -- )
+  $00 sectors !
+  $80 bytsec !
+  18 secpertrack !
+  stdensity disp colon dup mdquery 0 >
+  if stmedium disp drop
+  else
+    getpercom
+    percom 2+ @ >< tracks !
+    percom 6 + @ 1 = if
+      stdouble disp $100 bytsec !
+    else
+      stsingle disp
+    then
+  then
+  space stsector disp
+  $73 emit colon
+  sectors @ u. space space
+;
+
+: printsource
+  4 1 at stsrc disp colon $44 emit
+  srcnm c@ $30 + emit colon
+  space srcnm c@ printinfo
+;
+
+: printdestination
+  6 1 at stdest disp colon $44 emit
+  destnm c@ $30 + emit colon
+  space destnm c@ printinfo
+;
+
+: beep
+  $FD emit
+;
+
+: clserr
+  19 lcls 19 lcls 19 lcls 19 lcls
+;
+
+: errorwaitkey
+  beep key drop clserr
+;
+
+: errorhead
+  10 13 rcls
+  20 1 at sterror dispspace dstats c@ u. space
+;
+
+: printerr
+  errorhead
+  stwhile dispspace dispspace stsector dispspace
+  key drop
+;
+
+: secerr
+  errorhead
+  stillegal dispspace stsector dispspace stsize dispspace
+  key drop
+;
+
+: readerr
+  streading printerr
+;
+
+: writeerr
+  stwriting printerr
+;
+
+: resetcounter
+  stzeros0 stzeros1 strcpy
+;
+
+: checkhighspeed ( addr -- )
+  @ $E459 = 0if sthighspeed else stnormalspeed then disp
+;
+
+: setsecbufbase
+  appmhi @ $FF00 and $400 + bufbase !
+  $7000 bufbase @ - bufsize !
+  bufbase @ bufsize @ + bufend !
+  $7000 appmhi !
+  $7000 hsbase !
+;
+
+: readbuffer
+  hssrc @ siov !
+  bufbase @ secbuf !
+  stzeros1 stzeros2 strcpy
+  sector @ i ! {
+       i ++
+       scopy 19 15 at stzeros1 disp debugflg @ if space secbuf @ .$ then # key drop
+       i @ readsec errorcode c!
+       bytsec @ secbuf +!
+       sectors @ i @ = if break then                   # last sector
+       bufend @ secbuf @ = if break then               # buffer full?
+       errorcode c@ $7F > if break then                # error during read?
+  }
+;
+
+: writebuffer
+  hsdest @ siov !
+  bufbase @ secbuf !
+  stzeros2 stzeros1 strcpy
+  sector @ i ! {
+       i ++
+       scopy
+       fullquery 0 = 0if
+         19 15 at stzeros1 disp debugflg @ if space secbuf @ .$ then  # key drop
+         i @ writesec errorcode c!
+       then
+       bytsec @ secbuf +!
+       sectors @ i @ = if break then              # last sector
+       bufend @ secbuf @ = if break then          # buffer full?
+       errorcode c@ $7F > if break then           # error during write?
+  }
+  i @ sector !
+;
+
+: copy
+  11 12 rcls
+  printsource
+  printdestination
+  ( check if source == dest )
+  srcnm c@ destnm c@ = if
+    10 2 at " Error: source equals destination" disp exit
+  then
+  ( check source / dest density )
+  destnm c@ getpercom percom 6 + @
+  srcnm  c@ getpercom percom 6 + @
+  <> if
+    10 2 at "Error: different density" disp exit
+  then
+  sectors @ not if
+    secerr exit
+  then
+  19 8 at stsector dispspace stzeros1 disp
+  15 2 at "S-Drive " disp srcnm  c@ $30 + emit space  hssrc  checkhighspeed
+  debugflg @ if space hssrc @ .$ then
+  16 2 at "D-Drive " disp destnm c@ $30 + emit space  hsdest checkhighspeed
+  debugflg @ if space hsdest @ .$ then
+  debugflg @ if
+    12 2 at "Buffersize:" dispspace bufsize @ .$
+    13 2 at "Bufend:" dispspace bufend @ .$
+    14 2 at "APPMHI:" dispspace appmhi @ .$
+  then
+  bufbase @ secbuf !
+  resetcounter
+  1 errorcode !
+  0 sector !
+  {
+    19 2 at stread disp
+    readbuffer errorcode c@ 1 > if readerr then
+    errorcode c@ $80 < if
+      19 2 at stwrite disp
+      writebuffer errorcode c@ 1 > if writeerr then
+    then
+    sectors @ sector @ = if break then
+    errorcode c@ $7F > if break then
+  }
+  $E459 siov ! ( reset to original SIOV )
+  clserr stcopy dispspace
+  errorcode c@ $80 < if stsuccessfully else stunsuccessfully then dispspace
+  stcompleted dispspace cr cr stnextcpy dispspace
+;
+
+: status ( drv -- )
+  11 12 rcls
+  dup getstatus drop 11 2 at printstatus
+      getpercom drop 14 2 at printpercom
+;
+
+: printdirentry
+  cnt @ 11 +
+  dup 20 > if 10 - 22 else 2 then at
+  $10 * bufbase @ +
+  dup @ 0 = if drop exit then
+  dup @ $80 and if drop exit then
+  cnt ++
+  dup @ $20 and if $2A emit else space then space
+(  1+  dup @ .$ space ) ( Length )
+(  2+  dup @ .$ space ) ( Start Sector )
+  5 +  dup   8 type     ( Filename )
+          $2e emit      ( . )
+  8 +       3 type cr   ( Extender )
+;
+
+: showdirectory
+  11 12 rcls
+  0 cnt !
+  bufbase @ secbuf !
+  360 sector !
+  {
+    1 sector +!
+    sector @ readsec drop
+    0 i !
+    {
+      cnt @ 22 = if 22 2 at " press key" disp key drop 0 cnt ! 11 12 rcls then
+      i @ printdirentry
+      i ++
+      i @ 8 = if break then
+    }
+    sector @ 368 = if break then
+  }
+  22 2 at " press key" disp key drop
+;
+
+: ver
+  "1.5.0" disp
+;
+
+: banner
+  cls
+  $90 $2C6 c! crsoff
+  1 1 at "Full Scale " disp stsector disp stcopy disp
+  " ABBUC e.V. 2023" disp cr
+  2 1 at "Version " disp ver
+  printsource         3 line
+  printdestination    5 line
+                      7 line
+  2 24 at stmenumsg disp
+;
+
+: menu
+  10 13 rcls
+  11 2 at "1-9   : select source and query disk" disp
+  12 2 at "!1-9  : select dest   and query disk" disp
+  17 2 at " S  : src  floppy status" disp
+  18 2 at " F  : dest floppy status" disp
+  19 2 at " D  : display DOS 2.x directory" disp
+  20 2 at " Q  : quit program" disp
+  22 2 at " C  : copy or [START]" disp
+;
+
+: fssc ( -- )
+  setsecbufbase
+  getsdrvsio
+  getddrvsio
+
+  banner menu
+  {
+   ( crsoff key crsoff )
+     crsoff
+     {
+	0 $4d c! ( ATTRACT Mode reset )
+	chkey c@ $FF = if
+         consol c@ 6 = if ( [START] )
+           $43 ( Simulate C press )
+           break
+         then
+         consol c@ 3 = if ( [OPTION] )
+           $4D ( Simulate M press )
+           break
+         then
+       else
+         key
+         break
+       then
+     }
+     crsoff
+     dup $30 > if
+         dup $3A < if
+             dup $30 - srcnm c! printsource      srcnm c@  getsdrvsio
+         then
+     then
+     dup $20 > if
+         dup $2A < if
+            dup $20 - destnm c! printdestination destnm c@ getddrvsio
+         then
+     then
+
+     dup $43 ( "C" )   = if copy then
+     dup $46 ( "F" )   = if destnm c@ status then
+     dup $53 ( "S" )   = if srcnm  c@ status then
+     dup $44 ( "D" )   = if showdirectory menu then
+     dup $51 ( "Q" )   = if exit then
+     dup $1B ( "ESC" ) = if menu then
+     dup $4D ( "M" )   = if menu then
+     dup $3F ( "?"   ) = if
+        $ff debugflg ctoggle
+	1 38 at
+	debugflg @ if $44 else $20 then  emit
+     then
+     drop
+   }
+   cls crson
+;
+
+: main
+  init
+  fssc
+  bye
+;
