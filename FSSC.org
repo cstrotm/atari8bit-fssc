@@ -25,7 +25,7 @@ laden und zu installieren (nach dem Speedy-Standard). Ist dies
 Erfolgreich so wird das jeweilige Laufwerk mit High-Speed
 angesprochen, ansonsten nur mit normaler SIO-Geschwindigkeit.
 
-FSSC formaiert die Zieldiskette nicht, das Ziel muss immer schon
+FSSC formatiert die Zieldiskette nicht, das Ziel muss immer schon
 formatiert sein.
 
 FSSC kann aus einem DOS oder von einem Boot-Loader-Programm (Pico-DOS
@@ -39,13 +39,13 @@ und PERCOM-Abfrage die Parameter der Laufwerke zu lesen.
 
 Mit der Taste "C" (Copy) oder START wird der Kopiervorgang gestartet.
 
-Nach einem erfolgreichen (oder fehlgechlagenen) Kopiervorgang kann das
+Nach einem erfolgreichen (oder fehlgeschlagenen) Kopiervorgang kann das
 Menü mittels Taste "M" wieder angezeigt werden.
 
 Die Taste "S" zeigt Details zur Konfiguration des Quell-Laufwerks, die
 Taste "F" die Details des Ziel-Laufwerks an.
 
-Die Taste "D" listet das Inhaltsverzeichnis bei DOS 2.5 kopatiblen
+Die Taste "D" listet das Inhaltsverzeichnis bei DOS 2.5 kompatiblen
 DOS-Systemen auf.
 
 Die Taste "Q" verlässt das Programm, wurde es von einem DOS gestartet
@@ -67,6 +67,6 @@ werden.
 FSSC ist das dem ATR-Copy-Center (ACC; ein Archivier-Programm für das
 SIO2USB) entstanden und wurde in SPL-6502-Atari Programmiert.
 
-Dank an Thomas Grasel (für Funktionen im ACC), Oneel Kruns für
+Dank an Thomas Grasel (für Funktionen im ACC), Ron Kneusel für
 SPL-6502-Apple, Markus 'RIK' Römer für die HATZ 2023 und Matthias
 "Hias" Reichl für AtariSIO).
